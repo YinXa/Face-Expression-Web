@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Face Expression Editor</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: sans-serif;
+      background-color: #111;
+      color: white;
+    }
+    video, canvas {
+      border: 2px solid white;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+    .btns {
+      margin-top: 15px;
+    }
+    button {
+      margin: 0 5px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>Face Expression Editor</h1>
+  <video id="video" width="480" height="360" autoplay muted></video>
+  <canvas id="overlay" width="480" height="360"></canvas>
+  <div class="btns">
+    <button onclick="setExpression('happy')">Senang</button>
+    <button onclick="setExpression('sad')">Sedih</button>
+    <button onclick="setExpression('angry')">Marah</button>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('overlay');
+    const context = canvas.getContext('2d');
+    let currentExpression = null;
+
+    async function setupCamera() {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+      video.srcObject = stream;
+      return new Promise(resolve => {
+        video.onloadedmetadata = () => resolve(video);
+      });
+    }
+
+    async function loadModels() {
+      await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+    }
+
+    function setExpression(expression) {
+      currentExpression = expression;
+    }
+
+    function drawOverlay(box) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      const { x, y, width, height } = box;
+
+      // Simulasi ekspresi dengan warna overlay
+      context.strokeStyle = 'white';
+      context.lineWidth = 2;
+      context.strokeRect(x, y, width, height);
+
+      if (currentExpression === 'happy') {
+        context.fillStyle = 'rgba(255, 255, 0, 0.2)';
+      } else if (currentExpression === 'sad') {
+        context.fillStyle = 'rgba(0, 0, 255, 0.2)';
+      } else if (currentExpression === 'angry') {
+        context.fillStyle = 'rgba(255, 0, 0, 0.2)';
+      }
+
+      if (currentExpression) {
+        context.fillRect(x, y, width, height);
+      }
+    }
+
+    async function start() {
+      await setupCamera();
+      await loadModels();
+
+      setInterval(async () => {
+        const detections = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions());
+        if (detections) {
+          drawOverlay(detections.box);
+        } else {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }, 100);
+    }
+
+    start();
+  </script>
+</body>
+</html>
